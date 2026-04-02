@@ -1,0 +1,29 @@
+name: Deploy tunn3l relay
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'relay/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to DigitalOcean droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 64.23.144.236
+          username: root
+          key: ${{ secrets.BORE_SSH_KEY }}
+          source: "relay/server.js,relay/db.js,relay/words.js,relay/package.json,relay/install.sh"
+          target: /opt/tunn3l-relay
+          strip_components: 1
+      - name: Restart service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 64.23.144.236
+          username: root
+          key: ${{ secrets.BORE_SSH_KEY }}
+          script: cd /opt/tunn3l-relay && npm install --production && systemctl restart tunn3l-relay

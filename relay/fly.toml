@@ -1,0 +1,30 @@
+app = 'tunn3l-relay'
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  PORT = '4040'
+  BASE_DOMAIN = 'tunn3l.sh'
+
+[http_service]
+  internal_port = 4040
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+  max_machines_running = 1
+
+# TCP/SSH tunnel — fixed port 10000
+# All TCP tunnel traffic routes here; relay bridges to the active TCP tunnel
+[[services]]
+  internal_port = 10000
+  protocol = 'tcp'
+
+  [[services.ports]]
+    port = 10000
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1
