@@ -85,9 +85,63 @@ TUNN3L_VERCEL_TOKEN=vl_xxx
 
 ## Commands
 
+### Most common flows
+
+**1. I already own a domain — link it to my Vercel app:**
+
+```bash
+$ tunn3l domain link myapp.dev --host vercel --project my-site
+  tunn3l: detecting DNS provider for myapp.dev... cloudflare
+  tunn3l: adding myapp.dev to Vercel project "my-site"... done
+  tunn3l: setting DNS records on cloudflare... done
+  tunn3l: https://myapp.dev → Vercel "my-site"
+```
+
+That's it. One command. The CLI detects where your DNS lives (Cloudflare, Namecheap, etc.), sets the right records, and adds the domain to your Vercel project.
+
+**2. I just bought a domain — link it to Vercel:**
+
+Same command. Works whether you bought it 5 seconds ago or 5 years ago.
+
+```bash
+$ tunn3l domain link newsite.dev --host vercel --project my-new-app
+```
+
+**3. Link a domain to localhost (tunnel):**
+
+```bash
+$ tunn3l domain link myapp.dev --tunnel 3000
+  tunn3l: setting DNS on cloudflare... done
+  tunn3l: tunnel ready
+  tunn3l: https://myapp.dev → localhost:3000
+```
+
+**4. Subdomain to a different app:**
+
+```bash
+$ tunn3l domain link blog.myapp.dev --host vercel --project my-blog
+$ tunn3l domain link api.myapp.dev --tunnel 8080
+```
+
+---
+
+### `tunn3l domain link <domain> --host <provider> --project <name>`
+
+The primary command. Links a domain you own to a hosting provider or tunnel.
+
+```bash
+tunn3l domain link myapp.dev --host vercel --project my-site
+tunn3l domain link myapp.dev --host vercel --dir ./my-site    # deploy + link
+tunn3l domain link myapp.dev --host netlify --project my-site
+tunn3l domain link myapp.dev --tunnel 3000
+tunn3l domain link myapp.dev --ip 64.23.144.236
+```
+
+The CLI auto-detects the DNS provider by querying NS records, then uses the matching provider credentials from `~/.tunn3l/providers.json` to set DNS.
+
 ### `tunn3l domain search <query>`
 
-Check availability and pricing. Calls provider APIs directly from client.
+Check availability and pricing. For when you DO want to buy.
 
 ```bash
 $ tunn3l domain search myapp
