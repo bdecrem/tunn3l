@@ -856,7 +856,7 @@ h1 .ext{color:rgba(255,255,255,0.35)}
 <body>
 <div class="container">
 <h1>tunn3l<span class="ext">.sh</span></h1>
-<p class="sub">The tunnel service built for AI agents.<br>Expose localhost to the internet. One command. No signup. No config.</p>
+<p class="sub">HI The tunnel service built for AI agents.<br>Expose localhost to the internet. One command. No signup. No config.</p>
 
 <div class="terminal">
 <div class="terminal-bar">
