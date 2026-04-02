@@ -179,6 +179,10 @@ function handleHttp(httpArgs) {
         } else {
           console.log(`\n  tunn3l tunnel ready\n`)
           console.log(`  forwarding  ${msg.url} → http://localhost:${port}\n`)
+          if (msg.claim_url) {
+            const link = `\x1b]8;;${msg.claim_url}\x07${msg.claim_url}\x1b]8;;\x07`
+            console.log(`  ✦ Claim this tunnel: ${link}\n`)
+          }
         }
       }
 
@@ -353,6 +357,10 @@ function handleTcp(tcpArgs) {
             console.log(`  connect:    ssh user@${msg.tcpHost || 'tunn3l.sh'} -p ${msg.tcpPort}\n`)
           } else {
             console.log(`  connect:    ssh user@${msg.subdomain}.tunn3l.sh -o ProxyCommand="tunn3l proxy %h %p"\n`)
+          }
+          if (msg.claim_url) {
+            const link = `\x1b]8;;${msg.claim_url}\x07${msg.claim_url}\x1b]8;;\x07`
+            console.log(`  ✦ Claim this tunnel: ${link}\n`)
           }
         }
       }

@@ -235,6 +235,9 @@ wss.on('connection', (ws) => {
         response.tcpPort = tunnel.tcpPort
         response.tcpHost = BASE_DOMAIN
       }
+      if (token) {
+        response.claim_url = `https://${BASE_DOMAIN}/claim/${token}`
+      }
 
       ws.send(JSON.stringify(response))
       console.log(`[TUNNEL] ${subdomain} registered (${mode}${tunnel.tcpPort ? ` port:${tunnel.tcpPort}` : ''}${token ? ` token:${token.slice(0, 8)}...` : ''})`)
