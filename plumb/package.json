@@ -1,0 +1,7 @@
+{
+  "name": "plumb",
+  "version": "0.1.0",
+  "description": "One-command domain plumbing. Link domains to Vercel, tunnels, or IPs.",
+  "bin": { "plumb": "./plumb.js" },
+  "type": "module"
+}
