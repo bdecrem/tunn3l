@@ -1,14 +1,34 @@
 {
   "name": "tunn3l",
   "version": "0.4.0",
-  "description": "TUNN3L tunnel CLI — expose localhost to the internet",
+  "description": "Expose localhost to the internet with one command. Tunnel service for dev servers, SSH, and TCP.",
   "type": "module",
   "bin": {
-    "tunn3l": "./bore.js"
+    "tunn3l": "bore.js"
   },
   "scripts": {
     "start": "node bore.js"
   },
+  "files": [
+    "bore.js"
+  ],
+  "keywords": [
+    "tunnel",
+    "localhost",
+    "ngrok",
+    "expose",
+    "ssh",
+    "tcp",
+    "proxy",
+    "websocket"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bdecrem/tunn3l.git"
+  },
+  "homepage": "https://tunn3l.sh",
+  "author": "Bart Decrem",
+  "license": "MIT",
   "dependencies": {
     "ws": "^8.18.0"
   }
