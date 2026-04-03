@@ -594,16 +594,15 @@ p{color:rgba(255,255,255,0.5);font-size:0.9rem;line-height:1.7;margin-bottom:16p
 <p class="lead">Everything tunn3l does, from one-liners to always-on tunnels with permanent URLs.</p>
 
 <h2>One-command install</h2>
-<p>Run directly with npx — no install step. Or download a standalone binary if you don't have Node. Works on macOS and Linux, ARM and x64.</p>
+<p>A single curl downloads a standalone binary. No Node, no Python, no Docker, no package manager. Works on macOS and Linux, ARM and x64.</p>
 <div class="terminal">
 <div class="terminal-bar"><div class="dot" style="background:#FF4E50"></div><div class="dot" style="background:#F9D423"></div><div class="dot" style="background:#B4E33D"></div></div>
-<pre><span class="dim">$</span> <span class="cmd">npx tunn3l http 3000</span>
+<pre><span class="dim">$</span> <span class="cmd">curl -sSf https://tunn3l.sh/install | sh</span>
+<span class="ok">tunn3l installed! Open a new terminal, then:</span>
+  tunn3l http 3000
 
-<span class="dim"># or install globally:</span>
-<span class="dim">$</span> <span class="cmd">npm install -g tunn3l</span>
-
-<span class="dim"># or without Node:</span>
-<span class="dim">$</span> <span class="cmd">curl -sSf https://tunn3l.sh/install | sh</span></pre>
+<span class="dim"># or via npm:</span>
+<span class="dim">$</span> <span class="cmd">npx tunn3l http 3000</span></pre>
 </div>
 
 <h2>HTTP tunnels</h2>
@@ -654,7 +653,8 @@ p{color:rgba(255,255,255,0.5);font-size:0.9rem;line-height:1.7;margin-bottom:16p
 <div class="terminal">
 <div class="terminal-bar"><div class="dot" style="background:#FF4E50"></div><div class="dot" style="background:#F9D423"></div><div class="dot" style="background:#B4E33D"></div></div>
 <pre><span class="dim"># On your second machine:</span>
-<span class="dim">$</span> <span class="cmd">npx tunn3l daemon install --port 3000 --subdomain my-laptop</span>
+<span class="dim">$</span> <span class="cmd">curl -sSf https://tunn3l.sh/install | sh -s -- --key tk_your_key</span>
+<span class="dim">$</span> <span class="cmd">tunn3l daemon install --port 3000 --subdomain my-laptop</span>
 <span class="dim">$</span> <span class="cmd">tunn3l daemon start</span>
 
   forwarding  <span class="url">https://my-laptop.tunn3l.sh</span></pre>
@@ -784,7 +784,7 @@ if (apiKey) localStorage.setItem('tunn3l_api_key', apiKey)
 const app = document.getElementById('app')
 function render() { if (!apiKey) { renderNoKey(); return }; app.innerHTML = '<div style="text-align:center;padding:80px;color:#a8a29e">Loading...</div>'; fetchData() }
 function renderNoKey() {
-  app.innerHTML = '<div id="no-key"><h1><a href="/" style="color:inherit;text-decoration:none">tunn3l<span style="color:#a8a29e">.sh</span></a></h1><p style="color:#a8a29e;margin:8px 0 24px">Enter your API key to manage your tunnels.</p><input type="text" placeholder="tk_..." id="key-input"><p style="font-size:.75rem;color:#a8a29e;margin-top:16px">Install tunn3l to get a key: <code>npx tunn3l http 3000</code></p></div>'
+  app.innerHTML = '<div id="no-key"><h1><a href="/" style="color:inherit;text-decoration:none">tunn3l<span style="color:#a8a29e">.sh</span></a></h1><p style="color:#a8a29e;margin:8px 0 24px">Enter your API key to manage your tunnels.</p><input type="text" placeholder="tk_..." id="key-input"><p style="font-size:.75rem;color:#a8a29e;margin-top:16px">Install tunn3l to get a key: <code>curl -sSf https://tunn3l.sh/install | sh</code></p></div>'
   document.getElementById('key-input').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.value.trim()) { apiKey = e.target.value.trim(); localStorage.setItem('tunn3l_api_key', apiKey); render() } })
 }
 async function fetchData() {
@@ -871,7 +871,11 @@ h1 .ext{color:rgba(255,255,255,0.35)}
 <div class="dot" style="background:#B4E33D"></div>
 </div>
 <div class="terminal-body">
-<div class="cmd">$ npx tunn3l http 3000</div>
+<div class="cmd">$ curl -sSf https://tunn3l.sh/install | sh</div>
+<div class="dim">tunn3l: installing darwin/arm64...</div>
+<div class="ok">tunn3l: installed to ~/.tunn3l/bin/tunn3l</div>
+<div>&nbsp;</div>
+<div class="cmd">$ tunn3l http 3000</div>
 <div>&nbsp;</div>
 <div class="ok">tunn3l: tunnel ready</div>
 <div class="url">tunn3l: https://myapp.tunn3l.sh → localhost:3000</div>
@@ -880,8 +884,8 @@ h1 .ext{color:rgba(255,255,255,0.35)}
 
 <p style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-bottom:10px">Get started:</p>
 <div class="install">
-<code>npx tunn3l http 3000</code>
-<button class="copy-btn" onclick="navigator.clipboard.writeText('npx tunn3l http 3000').then(()=>{this.innerHTML='<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;#B4E33D&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><polyline points=&quot;20 6 9 17 4 12&quot;/></svg>';setTimeout(()=>this.innerHTML='<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><rect x=&quot;9&quot; y=&quot;9&quot; width=&quot;13&quot; height=&quot;13&quot; rx=&quot;2&quot;/><path d=&quot;M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1&quot;/></svg>',2000)})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+<code>curl -sSf https://tunn3l.sh/install | sh</code>
+<button class="copy-btn" onclick="navigator.clipboard.writeText('curl -sSf https://tunn3l.sh/install | sh').then(()=>{this.innerHTML='<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;#B4E33D&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><polyline points=&quot;20 6 9 17 4 12&quot;/></svg>';setTimeout(()=>this.innerHTML='<svg width=&quot;16&quot; height=&quot;16&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;><rect x=&quot;9&quot; y=&quot;9&quot; width=&quot;13&quot; height=&quot;13&quot; rx=&quot;2&quot;/><path d=&quot;M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1&quot;/></svg>',2000)})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
 </div>
 
 <div class="features">
@@ -893,7 +897,7 @@ h1 .ext{color:rgba(255,255,255,0.35)}
 <div class="feature">
 <div class="dot-indicator" style="background:#B4E33D"></div>
 <h3>Zero setup</h3>
-<p>No account. No API key. No client app on the other end. Just <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px">npx tunn3l http 3000</code> and go. Unlike Tailscale or Cloudflare Tunnel, nothing needed on either side.</p>
+<p>No account. No API key. No client app on the other end. Just curl the binary and go. Unlike Tailscale or Cloudflare Tunnel, nothing needed on either side.</p>
 </div>
 <div class="feature">
 <div class="dot-indicator" style="background:#FF4E50"></div>
