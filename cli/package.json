@@ -1,13 +1,14 @@
 {
   "name": "tunn3l",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Expose localhost to the internet with one command. Tunnel service for dev servers, SSH, and TCP.",
   "type": "module",
   "bin": {
     "tunn3l": "bore.js"
   },
   "scripts": {
-    "start": "node bore.js"
+    "start": "node bore.js",
+    "postinstall": "echo '\n  tunn3l installed!\n\n  HTTP tunnel:\n    tunn3l http 3000\n\n  SSH tunnel:\n    tunn3l ssh\n\n  Always-on (starts on boot):\n    tunn3l daemon install --port 3000\n    tunn3l daemon start\n\n  More: tunn3l --help\n'"
   },
   "files": [
     "bore.js"
