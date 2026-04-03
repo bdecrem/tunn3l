@@ -73,16 +73,21 @@ Your API user is just your Namecheap username (the one you log in with).
 
 ### Create a token
 
+**Important:** Tokens are in your *personal* account settings, not the team settings.
+
 1. Go to **vercel.com** → log in
-2. Click your avatar (top right) → **Settings**
-3. Click **Tokens** in the left sidebar
-4. Click **Create**
-5. Configure:
+2. Click your name/avatar at the **bottom left** of the sidebar
+3. Click **Account Settings** (not team settings — that's different)
+4. Click **Tokens** in the left sidebar
+5. Click **Create**
+6. Configure:
    - **Name:** `plumb`
    - **Scope:** `Full Account` (or scope to specific projects if you prefer)
    - **Expiration:** `No expiration` (or set one if you want to rotate it)
-6. Click **Create Token**
-7. Copy the token — you won't see it again
+7. Click **Create Token**
+8. Copy the token — you won't see it again
+
+**Common mistake:** If you click Settings from the team dashboard, you'll see team settings (General, Billing, Members, etc.) — there's no Tokens page there. You need to go to your *personal* account settings via the avatar at the bottom left.
 
 ---
 
