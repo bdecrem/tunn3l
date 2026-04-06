@@ -4,11 +4,11 @@
  * TUNN3L CLI — expose localhost to the internet via a tunnel relay.
  *
  * Usage:
- *   tunn3l http <port> [--subdomain <name>] [--relay <url>] [--json]
- *   tunn3l tcp <port> [--subdomain <name>] [--relay <url>] [--json]
- *   tunn3l ssh [--subdomain <name>] [--relay <url>] [--json]
+ *   tunn3l http <port> [--subdomain <name>] [--password <pass>] [--relay <url>] [--json]
+ *   tunn3l tcp <port> [--subdomain <name>] [--password <pass>] [--relay <url>] [--json]
+ *   tunn3l ssh [--subdomain <name>] [--password <pass>] [--relay <url>] [--json]
  *   tunn3l proxy <hostname> <port>
- *   tunn3l daemon install --port <port> [--name <name>] [--subdomain <name>] [--mode tcp]
+ *   tunn3l daemon install --port <port> [--name <name>] [--subdomain <name>] [--password <pass>] [--mode tcp]
  *   tunn3l daemon start|stop|status|uninstall|logs [--name <name>]
  *   tunn3l daemon list
  *
@@ -83,6 +83,7 @@ Options:
   --subdomain <name>   Request a specific subdomain
   --relay <url>        Relay server URL (default: wss://tunn3l.sh/ws/connect)
   --json               Output connection info as JSON (for agents)
+  --password <pass>    Require password to access tunnel (HTTP Basic Auth)
   --name <name>        Daemon instance name (default: "default")
   --port <port>        Port to tunnel (daemon install)
   --mode <http|tcp>    Tunnel mode (daemon install, default: http)
@@ -91,6 +92,7 @@ Options:
 Examples:
   tunn3l http 3000                        # expose dev server
   tunn3l http 3000 --subdomain myapp      # custom URL: myapp.tunn3l.sh
+  tunn3l http 3000 --password secret      # password-protected tunnel
   tunn3l http 8080 --json                 # JSON output for scripts
 
   tunn3l ssh                              # expose SSH with random subdomain
@@ -143,11 +145,13 @@ function handleHttp(httpArgs) {
   let subdomain = config.subdomain || null
   let relayUrl = process.env.TUNN3L_RELAY || config.relay || 'wss://tunn3l.sh/ws/connect'
   let jsonMode = config.json || false
+  let password = config.password || null
 
   for (let i = 1; i < httpArgs.length; i++) {
     if (httpArgs[i] === '--subdomain' && httpArgs[i + 1]) { subdomain = httpArgs[++i] }
     else if (httpArgs[i] === '--relay' && httpArgs[i + 1]) { relayUrl = httpArgs[++i] }
     else if (httpArgs[i] === '--json') { jsonMode = true }
+    else if (httpArgs[i] === '--password' && httpArgs[i + 1]) { password = httpArgs[++i] }
   }
 
   let backoff = 1000
@@ -161,6 +165,7 @@ function handleHttp(httpArgs) {
       const reg = { type: 'register', subdomain }
       if (token) reg.token = token
       if (deviceId) { reg.device_id = deviceId; reg.hostname = osHostname(); reg.os = platform() }
+      if (password) reg.password = password
       ws.send(JSON.stringify(reg))
     })
 
@@ -178,7 +183,9 @@ function handleHttp(httpArgs) {
           console.log(JSON.stringify({ url: msg.url, subdomain: msg.subdomain }))
         } else {
           console.log(`\n  tunn3l tunnel ready\n`)
-          console.log(`  forwarding  ${msg.url} → http://localhost:${port}\n`)
+          console.log(`  forwarding  ${msg.url} → http://localhost:${port}`)
+          if (password) console.log(`  password:   protected (HTTP Basic Auth)`)
+          console.log()
           if (msg.claim_url) {
             const link = `\x1b]8;;${msg.claim_url}\x07${msg.claim_url}\x1b]8;;\x07`
             console.log(`  ✦ Claim this tunnel: ${link}\n`)
@@ -300,11 +307,13 @@ function handleTcp(tcpArgs) {
   let subdomain = config.subdomain || null
   let relayUrl = process.env.TUNN3L_RELAY || config.relay || 'wss://tunn3l.sh/ws/connect'
   let jsonMode = config.json || false
+  let password = config.password || null
 
   for (let i = 1; i < tcpArgs.length; i++) {
     if (tcpArgs[i] === '--subdomain' && tcpArgs[i + 1]) { subdomain = tcpArgs[++i] }
     else if (tcpArgs[i] === '--relay' && tcpArgs[i + 1]) { relayUrl = tcpArgs[++i] }
     else if (tcpArgs[i] === '--json') { jsonMode = true }
+    else if (tcpArgs[i] === '--password' && tcpArgs[i + 1]) { password = tcpArgs[++i] }
   }
 
   const streams = new Map() // streamId → net.Socket
@@ -319,6 +328,7 @@ function handleTcp(tcpArgs) {
       const reg = { type: 'register', subdomain, mode: 'tcp' }
       if (token) reg.token = token
       if (deviceId) { reg.device_id = deviceId; reg.hostname = osHostname(); reg.os = platform() }
+      if (password) reg.password = password
       ws.send(JSON.stringify(reg))
     })
 
@@ -583,6 +593,7 @@ function daemonInstall(name, installArgs) {
     else if (installArgs[i] === '--subdomain' && installArgs[i + 1]) { config.subdomain = installArgs[++i] }
     else if (installArgs[i] === '--relay' && installArgs[i + 1]) { config.relay = installArgs[++i] }
     else if (installArgs[i] === '--mode' && installArgs[i + 1]) { config.mode = installArgs[++i] }
+    else if (installArgs[i] === '--password' && installArgs[i + 1]) { config.password = installArgs[++i] }
     else if (installArgs[i] === '--name') { i++ } // skip, already parsed
   }
 

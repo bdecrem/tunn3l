@@ -29,6 +29,8 @@ const BASE_DOMAIN = process.env.BASE_DOMAIN || 'localhost'
 const MAX_REQUEST_BODY = 50 * 1024 * 1024 // 50MB max request body
 const MAX_TUNNELS_PER_TOKEN = 20 // max concurrent tunnels per token
 const SUBDOMAIN_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/ // valid subdomain format
+const RATE_LIMIT_REQUESTS_PER_SEC = 100 // max HTTP requests per tunnel per second
+const RATE_LIMIT_WS_PER_MIN = 10 // max WebSocket connections per IP per minute
 
 // Registry: subdomain → { ws, mode, pending, tcpStreams, tcpPort, requestCount, connectionId, token }
 // mode: "http" (default) or "tcp"
@@ -38,6 +40,41 @@ const tunnels = new Map()
 
 // Track tunnels per token for rate limiting
 const tunnelsPerToken = new Map() // token → Set<subdomain>
+
+// Per-tunnel rate limiting: subdomain → { count, resetAt }
+const tunnelRateLimit = new Map()
+
+function checkTunnelRateLimit(subdomain) {
+  const now = Date.now()
+  let entry = tunnelRateLimit.get(subdomain)
+  if (!entry || now >= entry.resetAt) {
+    entry = { count: 0, resetAt: now + 1000 }
+    tunnelRateLimit.set(subdomain, entry)
+  }
+  entry.count++
+  return entry.count <= RATE_LIMIT_REQUESTS_PER_SEC
+}
+
+// Per-IP WebSocket connection rate limiting: ip → { count, resetAt }
+const wsConnRateLimit = new Map()
+
+function checkWsConnRateLimit(ip) {
+  const now = Date.now()
+  let entry = wsConnRateLimit.get(ip)
+  if (!entry || now >= entry.resetAt) {
+    entry = { count: 0, resetAt: now + 60000 }
+    wsConnRateLimit.set(ip, entry)
+  }
+  entry.count++
+  return entry.count <= RATE_LIMIT_WS_PER_MIN
+}
+
+// Clean up stale rate limit entries every 60s
+setInterval(() => {
+  const now = Date.now()
+  for (const [k, v] of tunnelRateLimit) { if (now >= v.resetAt) tunnelRateLimit.delete(k) }
+  for (const [k, v] of wsConnRateLimit) { if (now >= v.resetAt) wsConnRateLimit.delete(k) }
+}, 60000)
 
 // Port registry: port → subdomain (for TCP port routing)
 const portToSubdomain = new Map()
@@ -90,6 +127,13 @@ const wssTcp = new WebSocketServer({ noServer: true })
 server.on('upgrade', (req, socket, head) => {
   const url = new URL(req.url, `http://${req.headers.host}`)
   if (url.pathname === '/ws/connect') {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress
+    if (!checkWsConnRateLimit(ip)) {
+      console.log(`[RATE] WebSocket connection rate limit exceeded for ${ip}`)
+      socket.write('HTTP/1.1 429 Too Many Requests\r\n\r\n')
+      socket.destroy()
+      return
+    }
     wss.handleUpgrade(req, socket, head, (ws) => {
       wss.emit('connection', ws, req)
     })
@@ -203,7 +247,7 @@ wss.on('connection', (ws) => {
       }
 
       registeredSubdomain = subdomain
-      const tunnel = { ws, mode, pending: new Map(), tcpStreams: new Map(), requestCount: 0, connectionId: null }
+      const tunnel = { ws, mode, pending: new Map(), tcpStreams: new Map(), requestCount: 0, connectionId: null, password: msg.password || null }
 
       if (mode === 'tcp') {
         const tcpPort = assignTcpPort()
@@ -926,6 +970,30 @@ h1 .ext{color:rgba(255,255,255,0.35)}
     res.writeHead(404, { 'Content-Type': 'text/plain' })
     res.end(`No tunnel found for subdomain: ${subdomain}`)
     return
+  }
+
+  // Per-tunnel rate limiting
+  if (!checkTunnelRateLimit(subdomain)) {
+    res.writeHead(429, { 'Content-Type': 'text/plain', 'Retry-After': '1' })
+    res.end('Rate limit exceeded')
+    return
+  }
+
+  // Password protection (HTTP Basic Auth)
+  if (tunnel.password) {
+    const auth = req.headers.authorization
+    if (!auth || !auth.startsWith('Basic ')) {
+      res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': `Basic realm="${subdomain}.${BASE_DOMAIN}"` })
+      res.end('Authentication required')
+      return
+    }
+    const decoded = Buffer.from(auth.slice(6), 'base64').toString()
+    const password = decoded.includes(':') ? decoded.slice(decoded.indexOf(':') + 1) : decoded
+    if (password !== tunnel.password) {
+      res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': `Basic realm="${subdomain}.${BASE_DOMAIN}"` })
+      res.end('Invalid password')
+      return
+    }
   }
 
   // TCP tunnels don't serve HTTP
