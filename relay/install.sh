@@ -15,7 +15,7 @@ for arg in "$@"; do
   prev_arg="$arg"
 done
 
-REPO="bdecrem/hilma"
+REPO="bdecrem/tunn3l"
 INSTALL_DIR="$HOME/.tunn3l/bin"
 BASE_URL="https://github.com/$REPO/releases/latest/download"
 
