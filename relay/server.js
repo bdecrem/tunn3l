@@ -92,6 +92,40 @@ function assignTcpPort() {
 // Per-tunnel TCP listeners: port → net.Server
 const tcpListeners = new Map()
 
+function passwordPage(subdomain, wrongPassword) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${subdomain}.tunn3l.sh</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#1a1a18;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center}
+.card{background:#222;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:32px;width:100%;max-width:360px}
+h1{font-size:1.1rem;font-weight:600;margin-bottom:4px}
+.sub{color:rgba(255,255,255,0.4);font-size:0.8rem;margin-bottom:24px}
+input[type=password]{width:100%;padding:10px 12px;background:#1a1a18;border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:0.95rem;outline:none;margin-bottom:12px}
+input[type=password]:focus{border-color:#FC913A}
+button{width:100%;padding:10px;background:#FC913A;color:#000;border:none;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer}
+button:hover{background:#e07e2a}
+.err{color:#FF4E50;font-size:0.8rem;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>This tunnel is password-protected</h1>
+<p class="sub">${subdomain}.tunn3l.sh</p>
+${wrongPassword ? '<p class="err">Wrong password</p>' : ''}
+<form method="POST" action="/__tunn3l_auth">
+<input type="password" name="password" placeholder="Password" autofocus>
+<button type="submit">Enter</button>
+</form>
+</div>
+</body>
+</html>`
+}
+
 function generateId() {
   return crypto.randomBytes(8).toString('hex') // 16-char hex = 64 bits
 }
@@ -979,19 +1013,34 @@ h1 .ext{color:rgba(255,255,255,0.35)}
     return
   }
 
-  // Password protection (HTTP Basic Auth)
+  // Password protection (cookie-based with HTML form)
   if (tunnel.password) {
-    const auth = req.headers.authorization
-    if (!auth || !auth.startsWith('Basic ')) {
-      res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': `Basic realm="${subdomain}.${BASE_DOMAIN}"` })
-      res.end('Authentication required')
+    // Check for valid password cookie
+    const cookies = req.headers.cookie || ''
+    const match = cookies.match(/(?:^|;\s*)tunn3l_auth=([^;]+)/)
+    const hasValidCookie = match && match[1] === tunnel.password
+
+    // Handle password form submission
+    if (req.method === 'POST' && req.url === '/__tunn3l_auth') {
+      const chunks = []
+      req.on('data', c => chunks.push(c))
+      req.on('end', () => {
+        const body = Buffer.concat(chunks).toString()
+        const params = new URLSearchParams(body)
+        if (params.get('password') === tunnel.password) {
+          res.writeHead(303, { 'Set-Cookie': `tunn3l_auth=${tunnel.password}; Path=/; HttpOnly; SameSite=Strict; Secure`, 'Location': '/' })
+          res.end()
+        } else {
+          res.writeHead(200, { 'Content-Type': 'text/html' })
+          res.end(passwordPage(subdomain, true))
+        }
+      })
       return
     }
-    const decoded = Buffer.from(auth.slice(6), 'base64').toString()
-    const password = decoded.includes(':') ? decoded.slice(decoded.indexOf(':') + 1) : decoded
-    if (password !== tunnel.password) {
-      res.writeHead(401, { 'Content-Type': 'text/plain', 'WWW-Authenticate': `Basic realm="${subdomain}.${BASE_DOMAIN}"` })
-      res.end('Invalid password')
+
+    if (!hasValidCookie) {
+      res.writeHead(200, { 'Content-Type': 'text/html' })
+      res.end(passwordPage(subdomain, false))
       return
     }
   }
