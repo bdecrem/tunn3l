@@ -39,6 +39,26 @@ function saveConfig(config) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), { mode: 0o600 })
 }
 
+// No Vercel token in ~/.plumb? Use the one the Vercel CLI keeps for `vercel login`
+// (macOS: ~/Library/Application Support/com.vercel.cli/auth.json; Linux: ~/.config/...).
+function vercelCliToken() {
+  const candidates = [
+    path.join(process.env.HOME, 'Library', 'Application Support', 'com.vercel.cli', 'auth.json'),
+    path.join(process.env.XDG_CONFIG_HOME || path.join(process.env.HOME, '.config'), 'com.vercel.cli', 'auth.json'),
+  ]
+  for (const f of candidates) {
+    try {
+      const token = JSON.parse(fs.readFileSync(f, 'utf-8')).token
+      if (token) return token
+    } catch { /* next */ }
+  }
+  return null
+}
+
+function vercelToken(config) {
+  return config.vercel?.token || vercelCliToken()
+}
+
 // ── DNS Provider Detection ──────────────────────────────
 
 async function detectDnsProvider(domain) {
@@ -50,6 +70,14 @@ async function detectDnsProvider(domain) {
   try {
     ns = execSync(`dig +short NS ${root} 2>/dev/null`, { encoding: 'utf-8' }).toLowerCase()
   } catch { /* ignore */ }
+
+  if (!ns.trim()) {
+    // Just registered: the delegation is not in the resolvers yet, but whois has it.
+    try {
+      ns = execSync(`whois ${root} 2>/dev/null`, { encoding: 'utf-8' })
+        .split('\n').filter(l => /name server/i.test(l)).join(' ').toLowerCase()
+    } catch { /* ignore */ }
+  }
 
   if (ns.includes('cloudflare')) return 'cloudflare'
   if (ns.includes('registrar-servers.com')) return 'namecheap'
@@ -210,10 +238,10 @@ async function vercelFetch(endpoint, token, options = {}) {
   return data
 }
 
-async function vercelAddDomain(project, domain, token) {
+async function vercelAddDomain(project, domain, token, redirectTo) {
   return vercelFetch(`/v10/projects/${project}/domains`, token, {
     method: 'POST',
-    body: JSON.stringify({ name: domain }),
+    body: JSON.stringify(redirectTo ? { name: domain, redirect: redirectTo, redirectStatusCode: 308 } : { name: domain }),
   })
 }
 
@@ -228,6 +256,7 @@ function vercelDnsRecords(domain) {
   if (sub === '@') {
     return [
       { type: 'A', name: '@', value: '76.76.21.21' },
+      { type: 'CNAME', name: 'www', value: 'cname.vercel-dns.com' },
     ]
   } else {
     return [
@@ -304,31 +333,35 @@ async function cmdLink(domain, args) {
 }
 
 async function linkToVercel(domain, project, dnsProvider, config) {
-  if (!config.vercel?.token) {
-    console.error('  ✗ no vercel token — run plumb setup')
+  const token = vercelToken(config)
+  if (!token) {
+    console.error('  ✗ no vercel token — run plumb setup (or `vercel login`)')
     process.exit(1)
   }
 
   // 1. Verify project exists
   console.log(`  target:   vercel → ${project}`)
   try {
-    await vercelGetProject(project, config.vercel.token)
+    await vercelGetProject(project, token)
   } catch (e) {
     console.error(`  ✗ vercel project "${project}" not found: ${e.message}`)
     process.exit(1)
   }
 
-  // 2. Add domain to Vercel
-  console.log(`  adding domain to vercel...`)
-  try {
-    await vercelAddDomain(project, domain, config.vercel.token)
-    console.log(`  ✓ domain added to vercel project "${project}"`)
-  } catch (e) {
-    if (e.message.includes('already')) {
-      console.log(`  ✓ domain already on vercel project "${project}"`)
-    } else {
-      console.error(`  ✗ ${e.message}`)
-      process.exit(1)
+  // 2. Add domain to Vercel (an apex also gets its www, redirected to the apex)
+  const names = getSubdomain(domain) === '@' ? [domain, `www.${domain}`] : [domain]
+  for (const name of names) {
+    console.log(`  adding ${name} to vercel...`)
+    try {
+      await vercelAddDomain(project, name, token, name === domain ? undefined : domain)
+      console.log(`  ✓ ${name} added to vercel project "${project}"`)
+    } catch (e) {
+      if (e.message.includes('already')) {
+        console.log(`  ✓ ${name} already on vercel project "${project}"`)
+      } else {
+        console.error(`  ✗ ${e.message}`)
+        process.exit(1)
+      }
     }
   }
 
@@ -412,6 +445,7 @@ async function setDnsCloudflare(domain, cfConfig, records) {
 async function setDnsNamecheap(domain, ncConfig, newRecords) {
   if (!ncConfig?.api_key) {
     console.error('  ✗ no namecheap credentials — run plumb setup')
+    console.error('    (Namecheap → Profile → Tools → API Access: enable, whitelist this IP; see plumb/SETUP.md)')
     process.exit(1)
   }
 
