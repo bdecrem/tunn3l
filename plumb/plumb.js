@@ -304,11 +304,14 @@ async function cmdSetup() {
 
 async function cmdLink(domain, args) {
   const config = loadConfig()
-  const provider = await detectDnsProvider(domain)
+  // --dns <provider> skips detection: a domain registered minutes ago has no NS
+  // records published by its registry yet, so `dig` finds nothing to go on.
+  const provider = args['--dns'] || await detectDnsProvider(domain)
 
   if (!provider) {
     console.error(`  ✗ could not detect DNS provider for ${domain}`)
-    console.error(`    run 'plumb setup' to add provider credentials`)
+    console.error(`    run 'plumb setup' to add provider credentials,`)
+    console.error(`    or pass --dns namecheap|cloudflare for a just-registered domain`)
     process.exit(1)
   }
 
@@ -576,6 +579,7 @@ async function main() {
 
   setup                                    configure API keys
   link <domain> --vercel <project>         link domain to Vercel project
+                                           (add --dns namecheap|cloudflare when the domain is brand new)
   link <domain> --tunnel <port>            link domain to tunn3l tunnel
   link <domain> --ip <address>             link domain to IP address
   dns <domain> list                        list DNS records
